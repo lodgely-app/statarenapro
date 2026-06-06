@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+:root {
+  /* SofaScore Official Color Palette */
+  --sofa-blue: #374DF5;
+  --sofa-navy: #1B2132;
+  --sofa-bg: #F2F4F7;
+  --sofa-white: #FFFFFF;
+  --sofa-border: #E8EBF0;
+  --sofa-text-main: #1B2132;
+  --sofa-text-muted: #6C7584;
+  
+  /* Semantic Colors */
+  --sofa-live: #DC0C00;
+  --sofa-pending: #ED7E07;
+  --sofa-success: #00C424;
+  --sofa-rating-high: #374DF5;
+  --sofa-rating-good: #00C424;
+  --sofa-rating-avg: #D9AF00;
+  --sofa-rating-poor: #DC0C00;
+
+  --background: var(--sofa-bg);
+  --foreground: var(--sofa-text-main);
+  --primary: var(--sofa-blue);
+  --primary-foreground: var(--sofa-white);
+  --secondary: var(--sofa-success);
+  --accent: var(--sofa-live);
+  --border: var(--sofa-border);
+}
+
+@theme {
+  --color-sofa-blue: var(--sofa-blue);
+  --color-sofa-navy: var(--sofa-navy);
+  --color-sofa-bg: var(--sofa-bg);
+  --color-sofa-border: var(--sofa-border);
+  --color-sofa-text: var(--sofa-text-main);
+  --color-sofa-muted: var(--sofa-text-muted);
+  --color-sofa-live: var(--sofa-live);
+  --color-sofa-success: var(--sofa-success);
+  
+  --color-primary: var(--sofa-blue);
+  --color-primary-foreground: var(--sofa-white);
+  --color-secondary: var(--sofa-success);
+  --color-accent: var(--sofa-live);
+  --color-border: var(--sofa-border);
+}
+
+body {
+  background-color: var(--sofa-bg);
+  color: var(--sofa-text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* SofaScore Style Components */
+.sofa-card {
+  background: var(--sofa-white);
+  border: 1px solid var(--sofa-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.sofa-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--sofa-border);
+  transition: background-color 0.2s;
+}
+
+.sofa-row:hover {
+  background-color: #F8F9FA;
+}
+
+.sofa-header {
+  background: var(--sofa-white);
+  border-bottom: 2px solid var(--sofa-blue);
+  padding: 16px;
+}
+
+.sofa-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CED4DA;
+  border-radius: 10px;
+}
