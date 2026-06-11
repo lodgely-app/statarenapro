@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Standings } from '@/components/Standings';
 import { Fixtures } from '@/components/Fixtures';
+import { Bracket } from '@/components/Bracket';
 import { useTournament } from '@/hooks/useTournament';
 import { Trophy, LayoutDashboard, Target, Users, ChevronDown } from 'lucide-react';
 import { useTenant } from '@/context/TenantContext';
@@ -11,6 +12,7 @@ import { Fixtures as FixturesPreview } from '@/components/Fixtures';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [standingsTab, setStandingsTab] = useState<'tables' | 'bracket'>('tables');
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const { tenant } = useTenant();
   const { isAdmin } = useAuth();
@@ -54,7 +56,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen pb-20 pt-14 md:pt-16 bg-sofa-bg selection:bg-sofa-blue selection:text-white">
+    <div className="min-h-screen bg-sofa-bg pb-20 pt-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 space-y-2 md:space-y-4 relative z-10 pt-4">
@@ -114,26 +116,50 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10 items-start">
-              <div className="lg:col-span-7 space-y-4">
-                <div className="flex items-center gap-2 px-2">
-                  <Trophy className="w-3.5 h-3.5 text-sofa-muted" />
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-sofa-muted italic">Standings</h3>
-                </div>
-                {activeTournament.type === 'group+knockout' ? (
-                  <div className="space-y-6">
-                    {Array.from(new Set(activeTournament.teams.map(t => t.groupId).filter(Boolean))).sort().map(gId => (
-                      <div key={gId as string} className="space-y-2">
-                        <h4 className="text-xs font-black text-sofa-text uppercase px-2">Group {gId as string}</h4>
-                        <Standings teams={activeTournament.teams.filter(t => t.groupId === gId)} />
-                      </div>
-                    ))}
+              <div className="order-2 lg:order-1 lg:col-span-7 space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center gap-2">
+                    {/* <Trophy className="w-3.5 h-3.5 text-sofa-muted" />
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-sofa-muted italic">Standings</h3> */}
+                  {(activeTournament.type === 'knockout' || activeTournament.type === 'group+knockout') && (
+                    <div className="flex items-center gap-6 mt-2 border-b border-slate-200/60 w-full sm:w-auto">
+                      <button 
+                        onClick={() => setStandingsTab('tables')} 
+                        className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'tables' ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        TABLES
+                        {standingsTab === 'tables' && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
+                      </button>
+                      <button 
+                        onClick={() => setStandingsTab('bracket')} 
+                        className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'bracket' ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        BRACKET
+                        {standingsTab === 'bracket' && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
+                      </button>
+                    </div>
+                  )}
                   </div>
+                </div>
+                {standingsTab === 'tables' || activeTournament.type === 'league' ? (
+                  activeTournament.type === 'group+knockout' ? (
+                    <div className="space-y-6">
+                      {Array.from(new Set(activeTournament.teams.map(t => t.groupId).filter(Boolean))).sort().map(gId => (
+                        <div key={gId as string} className="space-y-2">
+                          <h4 className="text-xs font-black text-sofa-text uppercase px-2">Group {gId as string}</h4>
+                          <Standings teams={activeTournament.teams.filter(t => t.groupId === gId)} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Standings teams={activeTournament.teams} />
+                  )
                 ) : (
-                  <Standings teams={activeTournament.teams} />
+                  <Bracket matches={activeTournament.matches} teams={activeTournament.teams} />
                 )}
               </div>
 
-              <div className="lg:col-span-5 space-y-4">
+              <div className="order-1 lg:order-2 lg:col-span-5 space-y-4">
                 <div className="flex items-center gap-2 px-2">
                   <LayoutDashboard className="w-3.5 h-3.5 text-sofa-muted" />
                   <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-sofa-muted italic">Fixtures</h3>

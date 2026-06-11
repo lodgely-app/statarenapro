@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { Trophy, Lock, User, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface LoginProps {
@@ -23,6 +23,22 @@ export const Login = ({ onSuccess }: LoginProps) => {
     } catch (err: any) {
       setError('Invalid credentials. Please check your email and password.');
       console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      onSuccess();
+    } catch (err: any) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'Failed to sign in with Google');
+      }
     } finally {
       setLoading(false);
     }
@@ -79,6 +95,18 @@ export const Login = ({ onSuccess }: LoginProps) => {
             </div>
           )}
 
+          {/* Placeholder reCAPTCHA */}
+          <div className="flex items-center justify-between p-3 bg-[#F9F9F9] border border-[#D3D3D3] rounded shadow-sm max-w-[300px] mt-4 mx-auto">
+            <div className="flex items-center gap-3">
+              <input type="checkbox" required className="w-6 h-6 border-[#C1C1C1] rounded-sm cursor-pointer" id="recaptcha-dummy" />
+              <label htmlFor="recaptcha-dummy" className="text-sm text-[#222] cursor-pointer font-sans">I'm not a robot</label>
+            </div>
+            <div className="flex flex-col items-center">
+              <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" alt="reCAPTCHA" className="w-8" />
+              <span className="text-[8px] text-[#555] mt-1">reCAPTCHA</span>
+            </div>
+          </div>
+
           <button 
             type="submit" 
             disabled={loading}
@@ -86,6 +114,25 @@ export const Login = ({ onSuccess }: LoginProps) => {
           >
             {loading ? 'Verifying...' : 'Sign In'}
             <ArrowRight className="w-4 h-4" />
+          </button>
+          
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-sofa-border"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-sofa-muted font-bold text-[10px] uppercase tracking-widest">Or</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleGoogleSignIn}
+            className="w-full flex items-center justify-center gap-3 bg-white border border-sofa-border text-sofa-text hover:bg-slate-50 py-3.5 rounded-xl font-bold transition-all shadow-sm"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+            Sign in with Google
           </button>
         </form>
       </div>

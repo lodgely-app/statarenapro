@@ -223,14 +223,15 @@ export const generateGroupKnockout = (teams: Team[], tournamentId: string): { ma
   let knockoutMatches = numQualifiers / 2;
   for (let r = 1; r <= numRounds; r++) {
     for (let i = 0; i < knockoutMatches; i++) {
+      const knockoutRound = r + 3; // Knockout rounds start after group stage (which is 3 rounds)
       matches.push({
-        id: `cup-r${r}-${i}`,
+        id: `cup-r${knockoutRound}-${i}`,
         homeTeamId: 'TBD',
         awayTeamId: 'TBD',
         homeScore: null,
         awayScore: null,
         status: 'scheduled',
-        round: r + 3, // Knockout rounds start after group stage (which is 3 rounds)
+        round: knockoutRound,
         isKnockout: true,
         tournamentId,
         tenantId: '',

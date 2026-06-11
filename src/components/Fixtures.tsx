@@ -231,12 +231,7 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
   const [tempScores, setTempScores] = React.useState<Record<string, { h: number | null; a: number | null }>>({});
   const [tempDateStr, setTempDateStr] = useState<string>('');
   const [tempTimeStr, setTempTimeStr] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'list' | 'bracket' | 'groups' | 'upcoming' | 'results'>(
-    isDashboard ? 'upcoming'
-    : tournamentType === 'group+knockout' ? 'groups' 
-    : tournamentType === 'knockout' ? 'bracket' 
-    : 'list'
-  );
+  const [viewMode, setViewMode] = useState<'matches' | 'groups' | 'upcoming' | 'results'>(isDashboard ? 'upcoming' : 'matches');
 
   const startEditing = (match: Match) => {
     if (!isAdmin) return;
@@ -272,18 +267,7 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
     setEditingMatchId(null);
   };
 
-  const bracketMatches = tournamentType === 'group+knockout' 
-    ? matches.filter(m => m.isKnockout) 
-    : matches;
-
-  const matchesByRound = bracketMatches.reduce((acc, match) => {
-    const round = match.round || 1;
-    if (!acc[round]) acc[round] = [];
-    acc[round].push(match);
-    return acc;
-  }, {} as Record<number, Match[]>);
-
-  const rounds = Object.keys(matchesByRound).sort((a, b) => Number(a) - Number(b));
+  const isKnockout = tournamentType === 'knockout' || tournamentType === 'group+knockout';
 
   return (
     <div className="space-y-4">
@@ -292,9 +276,9 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
         <div className="bg-white border-b border-sofa-border px-4 flex items-center justify-between h-10">
           <div className="flex h-full">
             {!isDashboard && (
-              <button onClick={() => setViewMode('list')} className={`px-4 h-full flex items-center text-[10px] font-bold tracking-wider relative transition-all ${viewMode === 'list' ? 'text-sofa-blue' : 'text-sofa-muted hover:text-sofa-text'}`}>
+              <button onClick={() => setViewMode('matches')} className={`px-4 h-full flex items-center text-[10px] font-bold tracking-wider relative transition-all ${viewMode === 'matches' ? 'text-sofa-blue' : 'text-sofa-muted hover:text-sofa-text'}`}>
                 MATCHES
-                {viewMode === 'list' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sofa-blue" />}
+                {viewMode === 'matches' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sofa-blue" />}
               </button>
             )}
             {isDashboard && (
@@ -315,12 +299,6 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
                 {viewMode === 'groups' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sofa-blue" />}
               </button>
             )}
-            {(tournamentType === 'knockout' || tournamentType === 'group+knockout') && (
-              <button onClick={() => setViewMode('bracket')} className={`px-4 h-full flex items-center text-[10px] font-bold tracking-wider relative transition-all ${viewMode === 'bracket' ? 'text-sofa-blue' : 'text-sofa-muted hover:text-sofa-text'}`}>
-                BRACKET
-                {viewMode === 'bracket' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sofa-blue" />}
-              </button>
-            )}
           </div>
           {!isAdmin && (
              <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded border border-sofa-border">
@@ -331,40 +309,7 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
         </div>
       )}
 
-      {viewMode === 'bracket' ? (
-        <div className="sofa-card p-0 overflow-hidden relative group/scroll bg-slate-50">
-          <div className="overflow-x-auto overflow-y-hidden custom-scrollbar pb-6">
-            <div className="p-8 md:p-12 flex gap-12 md:gap-20 min-w-max items-center justify-start">
-              {rounds.map((round, rIndex) => (
-                <div key={round} className="flex flex-col gap-6 md:gap-10 relative">
-                  <div className="text-center mb-1">
-                    <span className="text-[9px] font-black text-sofa-muted uppercase tracking-[0.2em]">ROUND {round}</span>
-                  </div>
-                  <div className="flex flex-col justify-around gap-8 md:gap-12 h-full relative">
-                    {matchesByRound[Number(round)].map((match, mIndex) => (
-                      <div key={match.id} className="relative flex items-center">
-                        <MatchCard match={match} teams={teams} compact={true} onStartEditing={startEditing} isAdmin={isAdmin} />
-                        {rIndex < rounds.length - 1 && (
-                          <>
-                            <div className="absolute -right-6 md:-right-10 w-6 md:w-10 h-px bg-sofa-border" />
-                            <div className={`absolute -right-6 md:-right-10 w-px bg-sofa-border ${mIndex % 2 === 0 ? 'h-8 md:h-12 top-1/2' : 'h-8 md:h-12 bottom-1/2'}`} />
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div className="flex flex-col items-center gap-4 px-10 relative">
-                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-sofa-blue shadow-lg">
-                    <Trophy className="w-6 h-6 text-sofa-blue fill-current" />
-                 </div>
-                 <span className="text-[9px] font-black text-sofa-blue uppercase tracking-[0.3em] italic">Champion</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : viewMode === 'groups' ? (
+      {viewMode === 'groups' ? (
         <div className="space-y-8">
           {Array.from(new Set(teams.map(t => t.groupId).filter(Boolean))).sort().map(gId => {
             const groupTeams = teams.filter(t => t.groupId === gId);

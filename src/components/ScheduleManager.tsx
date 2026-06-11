@@ -38,7 +38,7 @@ export const ScheduleManager = ({ matches, teams, onSave, onBack, isWizard }: Sc
     }
   };
 
-  const schedulableMatches = isWizard ? matches : matches.filter(m => m.status !== 'completed');
+  const schedulableMatches = isWizard ? matches : matches.filter(m => m.status !== 'completed' && m.date === null);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">

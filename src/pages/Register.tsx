@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { doc, setDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
 
 export default function Register() {
@@ -12,9 +12,30 @@ export default function Register() {
     password: '',
     agreeTerms: false,
   });
+  
+  const [step, setStep] = useState(1);
+  const [googleUser, setGoogleUser] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      setGoogleUser(result.user);
+      setFormData(prev => ({
+        ...prev,
+        email: result.user.email || '',
+        name: result.user.displayName || ''
+      }));
+      setStep(2);
+    } catch (err: any) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'Failed to sign in with Google');
+      }
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -26,7 +47,7 @@ export default function Register() {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.leagueName.trim() || !formData.email || !formData.password || !formData.name) {
+    if (!formData.leagueName.trim() || !formData.email || (!googleUser && !formData.password) || !formData.name) {
       setError('Please fill out all required fields.');
       return;
     }
@@ -40,21 +61,23 @@ export default function Register() {
     setSuccess('');
     
     try {
-      // Create auth user
       let uid = "local-mock-uid-" + Date.now();
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        uid = userCredential.user.uid;
-      } catch (authErr: any) {
-        // If the user hasn't set up their .env yet, Firebase uses the mock config and throws this
-        if (authErr.code === 'auth/configuration-not-found' || authErr.code === 'auth/invalid-api-key') {
-          console.warn("Firebase not configured. Using local mock auth.");
-        } else {
-          throw authErr; // Re-throw real errors (like email-already-in-use)
+      
+      if (googleUser) {
+        uid = googleUser.uid;
+      } else {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+          uid = userCredential.user.uid;
+        } catch (authErr: any) {
+          if (authErr.code === 'auth/configuration-not-found' || authErr.code === 'auth/invalid-api-key') {
+            console.warn("Firebase not configured. Using local mock auth.");
+          } else {
+            throw authErr;
+          }
         }
       }
       
-      // Provision tenant
       const slug = formData.leagueName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       
       try {
@@ -101,165 +124,164 @@ export default function Register() {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    // Optional Google sign in logic could go here
-    alert("Google sign in would happen here");
-  };
-
   return (
-    <div className="min-h-screen bg-sofa-bg flex flex-col">
-      {/* Navigation */}
-      <nav className="bg-sofa-blue px-4 md:px-6 h-12 md:h-14 shadow-md w-full">
-        <div className="max-w-7xl mx-auto h-full flex items-center justify-center">
-          <a href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center p-1.5 shadow-sm">
-              <img src="/favicon.png" alt="StatArena Logo" className="w-full h-full object-contain" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-white font-black text-lg md:text-xl tracking-tighter uppercase">
-                STATARENA <span className="font-light opacity-50">PRO</span>
-              </span>
-            </div>
-          </a>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans animate-in fade-in duration-500">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center mb-6">
+          <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center p-2 border border-slate-100">
+            <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
+          </div>
         </div>
-      </nav>
+      </div>
 
-      {/* Register Form */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4 py-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-8 md:p-10 rounded-3xl shadow-xl w-full max-w-2xl border border-slate-100"
-        >
-          {error && (
-            <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100">
-              {error}
-            </div>
-          )}
+      <div className="sm:mx-auto sm:w-full sm:max-w-xl">
+        <div className="bg-white py-10 px-8 shadow-xl shadow-slate-200/50 sm:rounded-2xl border border-slate-100">
           
-          {success && (
-            <div className="mb-6 p-3 bg-green-50 text-green-700 rounded-lg text-sm font-medium border border-green-100 flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              {success}
+          {step === 1 ? (
+            <div className="space-y-8 text-center">
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-800">Create an account</h2>
+                <p className="mt-2 text-sm text-slate-500">Get started with StatArena Pro today.</p>
+              </div>
+              
+              {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>}
+
+              <button
+                onClick={handleGoogleSignIn}
+                className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 py-3.5 rounded-lg font-medium transition-colors shadow-sm"
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                Sign up with Google
+              </button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-slate-400">Or continue with email</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setStep(2)}
+                className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3.5 rounded-lg font-medium transition-colors shadow-sm"
+              >
+                Use Email address
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-[28px] font-medium text-slate-800 mb-2">Almost done..</h2>
+                <p className="text-slate-600 text-[15px]">
+                  Tell us a bit about yourself to finish creating your <span className="font-bold text-slate-800">League / Community</span> account.
+                </p>
+              </div>
+
+              {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>}
+              {success && <div className="p-3 bg-green-50 text-green-600 text-sm rounded-lg">{success}</div>}
+
+              <form className="space-y-5" onSubmit={handleRegisterSubmit}>
+                <div>
+                  <label className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 mb-1.5">
+                    Name <span className="text-slate-400 text-xs font-medium">[REQUIRED]</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2.5 outline-none focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7] transition-all text-slate-800 text-[15px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 mb-1.5">
+                    Email <span className="text-slate-400 text-xs font-medium">[REQUIRED]</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    disabled={!!googleUser}
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={`w-full border rounded-md px-3 py-2.5 outline-none focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7] transition-all text-[15px] ${googleUser ? 'bg-[#E5E7EB] text-slate-600 border-transparent placeholder-slate-500' : 'bg-white border-slate-300 text-slate-800'}`}
+                  />
+                  {googleUser && <p className="mt-1.5 text-[13px] text-slate-500">This is your email on Google.</p>}
+                </div>
+
+                {!googleUser && (
+                  <div>
+                    <label className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 mb-1.5">
+                      Password <span className="text-slate-400 text-xs font-medium">[REQUIRED]</span>
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="w-full bg-white border border-slate-300 rounded-md px-3 py-2.5 outline-none focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7] transition-all text-slate-800 text-[15px]"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 mb-1.5">
+                    League / Community Name <span className="text-slate-400 text-xs font-medium">[REQUIRED]</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="leagueName"
+                    required
+                    placeholder="Your Company's Name"
+                    value={formData.leagueName}
+                    onChange={handleChange}
+                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2.5 outline-none focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7] transition-all text-slate-800 text-[15px] placeholder-slate-400"
+                  />
+                </div>
+
+                {/* Placeholder reCAPTCHA */}
+                <div className="flex items-center justify-between p-3 bg-[#F9F9F9] border border-[#D3D3D3] rounded shadow-sm max-w-[300px] mt-4">
+                  <div className="flex items-center gap-3">
+                    <input type="checkbox" required className="w-6 h-6 border-[#C1C1C1] rounded-sm cursor-pointer" id="recaptcha-dummy" />
+                    <label htmlFor="recaptcha-dummy" className="text-sm text-[#222] cursor-pointer font-sans">I'm not a robot</label>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" alt="reCAPTCHA" className="w-8" />
+                    <span className="text-[8px] text-[#555] mt-1">reCAPTCHA</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 pb-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="agreeTerms"
+                      checked={formData.agreeTerms}
+                      onChange={handleChange}
+                      className="w-4 h-4 rounded border-slate-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
+                    />
+                    <span className="text-[15px] text-slate-800 font-medium">
+                      I agree to the <a href="#" className="text-[#3A75C4] hover:underline">Terms of Service</a> and the <a href="#" className="text-[#3A75C4] hover:underline">Privacy Policy</a>
+                    </span>
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-[#6A5AE0] hover:bg-[#5a4bc4] text-white px-8 py-3 rounded text-[15px] font-semibold transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Creating...' : 'Continue'}
+                </button>
+              </form>
             </div>
           )}
-
-          <form onSubmit={handleRegisterSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Name */}
-              <div className="space-y-1.5">
-                <label className="text-[13px] font-black text-slate-800 flex items-center">
-                  Name <span className="text-pink-400 ml-0.5 text-lg leading-none">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Your Name"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#685AC5] focus:border-transparent text-slate-800 placeholder:text-slate-400 transition-shadow"
-                  required
-                />
-              </div>
-
-              {/* League Name */}
-              <div className="space-y-1.5">
-                <label className="text-[13px] font-black text-slate-800 flex items-center">
-                  League / Community Name <span className="text-pink-400 ml-0.5 text-lg leading-none">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="leagueName"
-                  value={formData.leagueName}
-                  onChange={handleChange}
-                  placeholder="League Name"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#685AC5] focus:border-transparent text-slate-800 placeholder:text-slate-400 transition-shadow"
-                  required
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1.5">
-                <label className="text-[13px] font-black text-slate-800 flex items-center">
-                  Email <span className="text-pink-400 ml-0.5 text-lg leading-none">*</span>
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="you@company.com"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#685AC5] focus:border-transparent text-slate-800 placeholder:text-slate-400 transition-shadow"
-                  required
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-1.5">
-                <label className="text-[13px] font-black text-slate-800 flex items-center">
-                  Password <span className="text-pink-400 ml-0.5 text-lg leading-none">*</span>
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Password (8+ characters)"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#685AC5] focus:border-transparent text-slate-800 placeholder:text-slate-400 transition-shadow"
-                  minLength={8}
-                  required
-                />
-              </div>
-            </div>
-
-            <hr className="border-slate-100 my-6" />
-
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="agreeTerms"
-                name="agreeTerms"
-                checked={formData.agreeTerms}
-                onChange={handleChange}
-                className="mt-1 w-4 h-4 rounded border-slate-300 text-[#685AC5] focus:ring-[#685AC5]"
-              />
-              <label htmlFor="agreeTerms" className="text-sm text-slate-700">
-                I agree to the <a href="#" className="text-[#685AC5] hover:underline">Terms of Service</a> and <a href="#" className="text-[#685AC5] hover:underline">Privacy Policy</a>.
-              </label>
-            </div>
-
-            <div className="flex flex-col items-center max-w-sm mx-auto space-y-6 pt-2">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3.5 bg-sofa-blue text-white rounded-lg font-bold text-sm tracking-wide hover:bg-blue-700 transition-colors shadow-md shadow-sofa-blue/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center h-[52px]"
-              >
-                {isSubmitting ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  'CREATE YOUR ACCOUNT'
-                )}
-              </button>
-
-              <div className="w-full flex items-center justify-center gap-4 relative">
-                <div className="h-px bg-slate-200 w-full" />
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap bg-white px-2">OR SIGN UP WITH</span>
-                <div className="h-px bg-slate-200 w-full" />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-lg font-bold text-[15px] hover:bg-slate-50 transition-colors flex items-center justify-center gap-3 h-[52px]"
-              >
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" className="w-5 h-5" />
-                Google
-              </button>
-            </div>
-          </form>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

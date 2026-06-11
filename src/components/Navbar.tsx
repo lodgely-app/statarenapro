@@ -30,23 +30,24 @@ export const Navbar = ({ activeTab, setActiveTab }: NavbarProps) => {
                 <img src="/favicon.png" alt="StatArena Logo" className="w-full h-full object-contain" />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="text-white font-black text-lg md:text-xl tracking-tighter uppercase">
-                  STATARENA <span className="font-light opacity-50">PRO</span>
-                </span>
-                <span className="text-[8px] font-bold text-white/40 uppercase tracking-[0.2em] hidden xs:block">
-                  Tournament Intelligence
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-white font-black text-lg md:text-xl tracking-tighter uppercase">
+                    STATARENA <span className="font-light opacity-50">PRO</span>
+                  </span>
+                  {tenant?.name && (
+                    <>
+                      <div className="h-5 w-px bg-white/20 mx-1 rounded" />
+                      <span className="text-[11px] font-black text-white/90 uppercase tracking-[0.2em]">{tenant.name}</span>
+                    </>
+                  )}
+                </div>
+                {!tenant?.name && (
+                  <span className="text-[8px] font-bold text-white/40 uppercase tracking-[0.2em] hidden xs:block">
+                    Tournament Intelligence
+                  </span>
+                )}
               </div>
             </div>
-
-            {/* Tenant Badge */}
-            {tenant?.name && (
-              <div className="hidden md:flex items-center h-full">
-                <div className="bg-white/10 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-sm shadow-sm">
-                  <span className="text-white font-black text-[10px] uppercase tracking-[0.2em]">{tenant.name}</span>
-                </div>
-              </div>
-            )}
           </div>
           
           {/* Navigation Links */}

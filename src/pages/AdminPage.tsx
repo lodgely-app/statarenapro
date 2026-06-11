@@ -39,7 +39,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 pt-14 md:pt-16 bg-sofa-bg">
+    <div className="min-h-screen bg-sofa-bg pb-20 pt-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 space-y-2 md:space-y-4 relative z-10 pt-4">

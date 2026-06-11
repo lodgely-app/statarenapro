@@ -18,8 +18,19 @@ import {
 export const useTournament = () => {
   const { tenantId } = useTenant();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveIdState] = useState<string | null>(() => {
+    return localStorage.getItem('statarena_active_tournament_id') || null;
+  });
   const [loading, setLoading] = useState(true);
+
+  const setActiveId = (id: string | null) => {
+    setActiveIdState(id);
+    if (id) {
+      localStorage.setItem('statarena_active_tournament_id', id);
+    } else {
+      localStorage.removeItem('statarena_active_tournament_id');
+    }
+  };
 
   // Sync with Firestore
   useEffect(() => {
@@ -40,12 +51,76 @@ export const useTournament = () => {
       
       setTournaments(loaded);
       
-      // Auto-select active tournament
+      // Auto-select active tournament if none is explicitly saved
       if (!activeId && loaded.length > 0) {
         const firstActive = loaded.find(t => t.status === 'active');
         setActiveId(firstActive ? firstActive.id : loaded[0].id);
+      } else if (activeId && !loaded.some(t => t.id === activeId)) {
+        // If saved ID no longer exists, select first available
+        if (loaded.length > 0) {
+          const firstActive = loaded.find(t => t.status === 'active');
+          setActiveId(firstActive ? firstActive.id : loaded[0].id);
+        } else {
+          setActiveId(null);
+        }
       }
       setLoading(false);
+      
+      // Auto-populate any completed group stages that are missing knockout data
+      loaded.forEach(t => {
+        if (t.type === 'group+knockout') {
+          const groupTeams = t.teams.filter(team => team.groupId);
+          const allCompleted = groupTeams.length > 0 && groupTeams.every(team => {
+            const teamsInThisGroup = groupTeams.filter(gt => gt.groupId === team.groupId).length;
+            return team.stats.played >= (teamsInThisGroup - 1);
+          });
+          
+          if (allCompleted) {
+            const firstKnockoutRoundMatches = t.matches.filter(m => m.isKnockout && m.round === 4);
+            const isPopulated = firstKnockoutRoundMatches.some(m => m.homeTeamId !== 'TBD' || m.awayTeamId !== 'TBD');
+            
+            if (!isPopulated && firstKnockoutRoundMatches.length > 0) {
+              // We need to auto populate it in the database
+              const newMatches = [...t.matches];
+              const groups = Array.from(new Set(t.teams.map(team => team.groupId).filter(Boolean))).sort();
+              const top2ByGroup: Record<string, any[]> = {};
+              
+              groups.forEach(gId => {
+                const sorted = t.teams
+                  .filter(team => team.groupId === gId)
+                  .sort((a, b) => (b.stats.points - a.stats.points) || (b.stats.goalDifference - a.stats.goalDifference) || (b.stats.goalsFor - a.stats.goalsFor));
+                top2ByGroup[gId as string] = sorted.slice(0, 2);
+              });
+              
+              let matchIdx = 0;
+              for (let i = 0; i < groups.length; i += 2) {
+                const groupA = groups[i] as string;
+                const groupB = groups[i + 1] as string;
+                
+                if (groupB) {
+                  const m1 = firstKnockoutRoundMatches[matchIdx++];
+                  if (m1) {
+                    m1.homeTeamId = top2ByGroup[groupA]?.[0]?.id || 'TBD';
+                    m1.awayTeamId = top2ByGroup[groupB]?.[1]?.id || 'TBD';
+                  }
+                  const m2 = firstKnockoutRoundMatches[matchIdx++];
+                  if (m2) {
+                    m2.homeTeamId = top2ByGroup[groupB]?.[0]?.id || 'TBD';
+                    m2.awayTeamId = top2ByGroup[groupA]?.[1]?.id || 'TBD';
+                  }
+                }
+              }
+              
+              firstKnockoutRoundMatches.forEach(modifiedMatch => {
+                const idx = newMatches.findIndex(m => m.id === modifiedMatch.id);
+                if (idx !== -1) newMatches[idx] = modifiedMatch;
+              });
+              
+              updateDoc(doc(db, 'tournaments', t.id), { matches: newMatches }).catch(console.error);
+            }
+          }
+        }
+      });
     });
 
     return () => unsubscribe();
@@ -102,30 +177,100 @@ export const useTournament = () => {
     // If it's a Cup/Knockout, progress the winner
     if (t.type === 'knockout' || matchId.startsWith('cup-')) {
       const completedMatch = newMatches.find(m => m.id === matchId);
-      if (completedMatch) {
+      if (completedMatch && isCompleted) {
         const winnerId = (completedMatch.homeScore || 0) > (completedMatch.awayScore || 0) 
           ? completedMatch.homeTeamId 
           : completedMatch.awayTeamId;
         
-        const nextRound = (completedMatch.round || 1) + 1;
-        const matchIndexInRound = t.matches.filter(m => m.round === completedMatch.round).findIndex(m => m.id === matchId);
-        const nextMatchIndex = Math.floor(matchIndexInRound / 2);
-        const isHomeInNext = matchIndexInRound % 2 === 0;
-
-        const nextMatchId = `cup-r${nextRound}-${nextMatchIndex}`;
+        // Parse id to find next round robustly (handles both old and new tournament formats)
+        const matchRegex = /^cup-r(\d+)-(\d+)$/;
+        const matchStr = completedMatch.id.match(matchRegex);
         
-        newMatches = newMatches.map(m => {
-          if (m.id === nextMatchId) {
-            return isHomeInNext 
-              ? { ...m, homeTeamId: winnerId } 
-              : { ...m, awayTeamId: winnerId };
-          }
-          return m;
-        });
+        if (matchStr) {
+          const currentR = parseInt(matchStr[1]);
+          const currentI = parseInt(matchStr[2]);
+          
+          const nextRoundId = currentR + 1;
+          const nextMatchIndex = Math.floor(currentI / 2);
+          const isHomeInNext = currentI % 2 === 0;
+  
+          const nextMatchId = `cup-r${nextRoundId}-${nextMatchIndex}`;
+          
+          newMatches = newMatches.map(m => {
+            if (m.id === nextMatchId) {
+              return isHomeInNext 
+                ? { ...m, homeTeamId: winnerId } 
+                : { ...m, awayTeamId: winnerId };
+            }
+            return m;
+          });
+        }
       }
     }
 
     const newTeams = (t.type === 'league' || t.type === 'group+knockout') ? calculateStandings(t.teams, newMatches) : t.teams;
+    
+    // Auto-populate knockout stage for group+knockout if all group matches are done
+    if (t.type === 'group+knockout') {
+      const groupTeams = newTeams.filter(t => t.groupId);
+      const allCompleted = groupTeams.length > 0 && groupTeams.every(t => {
+        const teamsInThisGroup = groupTeams.filter(gt => gt.groupId === t.groupId).length;
+        return t.stats.played >= (teamsInThisGroup - 1);
+      });
+      
+      if (allCompleted) {
+        const firstKnockoutRoundMatches = newMatches.filter(m => m.isKnockout && m.round === 4);
+        const isPopulated = firstKnockoutRoundMatches.some(m => m.homeTeamId !== 'TBD' || m.awayTeamId !== 'TBD');
+
+        if (!isPopulated && firstKnockoutRoundMatches.length > 0) {
+          const groups = Array.from(new Set(newTeams.map(team => team.groupId).filter(Boolean))).sort();
+          const top2ByGroup: Record<string, any[]> = {};
+          
+          groups.forEach(gId => {
+            const sorted = newTeams
+              .filter(team => team.groupId === gId)
+              .sort((a, b) => (b.stats.points - a.stats.points) || (b.stats.goalDifference - a.stats.goalDifference) || (b.stats.goalsFor - a.stats.goalsFor));
+            top2ByGroup[gId as string] = sorted.slice(0, 2);
+          });
+          
+          let matchIdx = 0;
+          for (let i = 0; i < groups.length; i += 2) {
+            const groupA = groups[i] as string;
+            const groupB = groups[i + 1] as string;
+            
+            if (groupB) {
+              const m1 = firstKnockoutRoundMatches[matchIdx++];
+              if (m1) {
+                m1.homeTeamId = top2ByGroup[groupA]?.[0]?.id || 'TBD';
+                m1.awayTeamId = top2ByGroup[groupB]?.[1]?.id || 'TBD';
+              }
+              const m2 = firstKnockoutRoundMatches[matchIdx++];
+              if (m2) {
+                m2.homeTeamId = top2ByGroup[groupB]?.[0]?.id || 'TBD';
+                m2.awayTeamId = top2ByGroup[groupA]?.[1]?.id || 'TBD';
+              }
+            } else {
+              // Odd number of groups, place winner/runner-up of this group
+              const m1 = firstKnockoutRoundMatches[matchIdx++];
+              if (m1) {
+                m1.homeTeamId = top2ByGroup[groupA]?.[0]?.id || 'TBD';
+                m1.awayTeamId = 'TBD';
+              }
+              const m2 = firstKnockoutRoundMatches[matchIdx++];
+              if (m2) {
+                m2.homeTeamId = 'TBD';
+                m2.awayTeamId = top2ByGroup[groupA]?.[1]?.id || 'TBD';
+              }
+            }
+          }
+          
+          firstKnockoutRoundMatches.forEach(modifiedMatch => {
+            const idx = newMatches.findIndex(m => m.id === modifiedMatch.id);
+            if (idx !== -1) newMatches[idx] = modifiedMatch;
+          });
+        }
+      }
+    }
     
     try {
       await updateDoc(doc(db, 'tournaments', activeId), {
