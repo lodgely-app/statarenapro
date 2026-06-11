@@ -39,7 +39,7 @@ export const generateLeagueFixtures = (teams: Team[], tournamentId: string): Mat
           round: round + 1,
           tournamentId,
           tenantId: '',
-          date: Date.now()
+          date: null
         });
       }
     }
@@ -133,7 +133,7 @@ export const generateCupBracket = (teams: Team[], tournamentId: string): Match[]
       round: 1,
       tournamentId,
       tenantId: '',
-      date: Date.now()
+      date: null
     });
   }
 
@@ -152,10 +152,93 @@ export const generateCupBracket = (teams: Team[], tournamentId: string): Match[]
         round: r,
         tournamentId,
         tenantId: '',
-        date: Date.now()
+        date: null
       });
     }
   }
 
   return matches;
+};
+
+export const generateGroupKnockout = (teams: Team[], tournamentId: string): { matches: Match[], teams: Team[] } => {
+  const matches: Match[] = [];
+  const updatedTeams = [...teams];
+  
+  // Shuffle teams for random draw
+  const shuffled = [...updatedTeams].sort(() => Math.random() - 0.5);
+  
+  // 1. Assign Groups (4 teams per group)
+  const numGroups = Math.max(1, Math.floor(shuffled.length / 4));
+  const groupNames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  
+  for (let i = 0; i < numGroups; i++) {
+    const groupId = groupNames[i];
+    const groupTeams = shuffled.slice(i * 4, (i + 1) * 4);
+    
+    // Assign groupId to teams
+    groupTeams.forEach(t => {
+      const teamIdx = updatedTeams.findIndex(ut => ut.id === t.id);
+      if (teamIdx > -1) {
+        updatedTeams[teamIdx].groupId = groupId;
+      }
+    });
+    
+    // Generate Round Robin for this group (up to 4 teams)
+    if (groupTeams.length === 4) {
+      const matchPairs = [
+        [groupTeams[0], groupTeams[3], 1],
+        [groupTeams[1], groupTeams[2], 1],
+        [groupTeams[0], groupTeams[2], 2],
+        [groupTeams[3], groupTeams[1], 2],
+        [groupTeams[0], groupTeams[1], 3],
+        [groupTeams[2], groupTeams[3], 3],
+      ];
+      
+      matchPairs.forEach(([home, away, round], idx) => {
+        if (home && away) {
+          matches.push({
+            id: `grp-${groupId}-r${round}-${idx}`,
+            homeTeamId: (home as Team).id,
+            awayTeamId: (away as Team).id,
+            homeScore: null,
+            awayScore: null,
+            status: 'scheduled',
+            round: round as number,
+            groupId,
+            isKnockout: false,
+            tournamentId,
+            tenantId: '',
+            date: null
+          });
+        }
+      });
+    }
+  }
+  
+  // 2. Generate Knockout Stage (Top 2 from each group advance)
+  const numQualifiers = numGroups * 2;
+  const numRounds = Math.ceil(Math.log2(numQualifiers));
+  
+  // Generate TBD matches for Knockout
+  let knockoutMatches = numQualifiers / 2;
+  for (let r = 1; r <= numRounds; r++) {
+    for (let i = 0; i < knockoutMatches; i++) {
+      matches.push({
+        id: `cup-r${r}-${i}`,
+        homeTeamId: 'TBD',
+        awayTeamId: 'TBD',
+        homeScore: null,
+        awayScore: null,
+        status: 'scheduled',
+        round: r + 3, // Knockout rounds start after group stage (which is 3 rounds)
+        isKnockout: true,
+        tournamentId,
+        tenantId: '',
+        date: null
+      });
+    }
+    knockoutMatches /= 2;
+  }
+  
+  return { matches, teams: updatedTeams };
 };

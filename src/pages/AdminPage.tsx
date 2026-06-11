@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Admin } from '@/components/Admin';
 import { Login } from '@/components/Login';
@@ -16,13 +17,18 @@ export default function AdminPage() {
     createTournament, 
     endTournament,
     deleteTournament,
+    updateMatchDate,
+    updateTournamentMatches,
     loading: tournamentsLoading
   } = useTournament();
 
-  if (activeTab === 'dashboard') {
-    window.location.href = '/';
-    return null;
-  }
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      navigate('/');
+    }
+  }, [activeTab, navigate]);
 
   if (authLoading || tournamentsLoading) {
     return (
@@ -50,6 +56,8 @@ export default function AdminPage() {
             tournaments={tournaments}
             activeTournament={activeTournament}
             onLogout={logout}
+            onUpdateMatchDate={updateMatchDate}
+            onUpdateTournamentMatches={updateTournamentMatches}
           />
         )}
       </div>

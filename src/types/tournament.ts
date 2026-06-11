@@ -10,7 +10,7 @@ export interface Tournament {
   id: string;
   tenantId: string;
   name: string;
-  type: 'league' | 'cup';
+  type: 'league' | 'knockout' | 'group+knockout';
   status: 'upcoming' | 'active' | 'completed';
   createdAt: number;
   teams: Team[];
@@ -36,6 +36,7 @@ export interface Team {
   playerName?: string;
   logoUrl?: string;
   stats: TeamStats;
+  groupId?: string;
 }
 
 export interface Match {
@@ -47,6 +48,8 @@ export interface Match {
   homeScore?: number | null;
   awayScore?: number | null;
   status: 'scheduled' | 'live' | 'completed';
-  date: number;
+  date: number | null;
   round?: number;
+  groupId?: string;
+  isKnockout?: boolean;
 }

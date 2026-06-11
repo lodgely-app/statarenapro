@@ -1,29 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Standings } from '@/components/Standings';
 import { Fixtures } from '@/components/Fixtures';
 import { useTournament } from '@/hooks/useTournament';
 import { Trophy, LayoutDashboard, Target, Users, ChevronDown } from 'lucide-react';
 import { useTenant } from '@/context/TenantContext';
+import { useAuth } from '@/hooks/useAuth';
+import { Fixtures as FixturesPreview } from '@/components/Fixtures';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const { tenant } = useTenant();
+  const { isAdmin } = useAuth();
 
   const { 
     tournaments,
     activeTournament, 
     setActiveId,
     updateMatchScore, 
+    updateMatchDate,
     loading: tournamentsLoading
   } = useTournament();
 
-  // Redirect logic would go here if activeTab becomes 'admin'
-  if (activeTab === 'admin') {
-    window.location.href = '/admin';
-    return null;
-  }
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (activeTab === 'admin') {
+      navigate('/admin');
+    }
+  }, [activeTab, navigate]);
 
   if (tournamentsLoading) {
     return (
@@ -58,7 +65,7 @@ export default function Dashboard() {
                 <div className="relative">
                   <button 
                     onClick={() => setIsSelectorOpen(!isSelectorOpen)}
-                    className="flex items-center gap-4 px-6 py-3 bg-sofa-white border border-sofa-border rounded-full hover:bg-sofa-border transition-all group shadow-sm"
+                    className="flex items-center gap-4 px-6 py-3 bg-white border border-sofa-border rounded-full hover:bg-sofa-border transition-all group shadow-sm"
                   >
                     <Trophy className="w-5 h-5 text-sofa-muted group-hover:text-sofa-blue transition-colors" />
                     <span className="text-base font-black text-sofa-text uppercase tracking-tight">
@@ -70,7 +77,7 @@ export default function Dashboard() {
                   {isSelectorOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsSelectorOpen(false)} />
-                      <div className="absolute top-full left-0 mt-2 w-[280px] bg-sofa-white rounded-xl shadow-xl border border-sofa-border z-50 overflow-hidden">
+                      <div className="absolute top-full left-0 mt-2 w-[280px] bg-white rounded-xl shadow-xl border border-sofa-border z-50 overflow-hidden">
                         <div className="py-2">
                           <div className="px-4 py-1.5 text-[11px] font-medium text-sofa-muted">
                             Your competitions
@@ -95,11 +102,11 @@ export default function Dashboard() {
               </div>
               
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-sofa-white border border-sofa-border rounded-lg">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-sofa-border rounded-lg">
                    <Users className="w-3.5 h-3.5 text-sofa-muted" />
                    <span className="text-[10px] font-black text-sofa-text uppercase italic">{activeTournament.teams.length} Clubs</span>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-sofa-white border border-sofa-border rounded-lg">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-sofa-border rounded-lg">
                    <Target className="w-3.5 h-3.5 text-sofa-muted" />
                    <span className="text-[10px] font-black text-sofa-text uppercase italic">{activeTournament.type}</span>
                 </div>
@@ -112,7 +119,18 @@ export default function Dashboard() {
                   <Trophy className="w-3.5 h-3.5 text-sofa-muted" />
                   <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-sofa-muted italic">Standings</h3>
                 </div>
-                <Standings teams={activeTournament.teams} />
+                {activeTournament.type === 'group+knockout' ? (
+                  <div className="space-y-6">
+                    {Array.from(new Set(activeTournament.teams.map(t => t.groupId).filter(Boolean))).sort().map(gId => (
+                      <div key={gId as string} className="space-y-2">
+                        <h4 className="text-xs font-black text-sofa-text uppercase px-2">Group {gId as string}</h4>
+                        <Standings teams={activeTournament.teams.filter(t => t.groupId === gId)} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Standings teams={activeTournament.teams} />
+                )}
               </div>
 
               <div className="lg:col-span-5 space-y-4">
@@ -123,9 +141,10 @@ export default function Dashboard() {
                 <Fixtures 
                   matches={activeTournament.matches} 
                   teams={activeTournament.teams} 
-                  onUpdateScore={updateMatchScore} 
+                  onUpdateScore={updateMatchScore}
                   tournamentType={activeTournament.type}
-                  isAdmin={false}
+                  isAdmin={isAdmin}
+                  isDashboard={true}
                 />
               </div>
             </div>

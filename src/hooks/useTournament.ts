@@ -51,7 +51,7 @@ export const useTournament = () => {
     return () => unsubscribe();
   }, [activeId, tenantId]);
 
-  const createTournament = async (name: string, type: 'league' | 'cup', teams: Team[], fixtures: Match[]) => {
+  const createTournament = async (name: string, type: 'league' | 'knockout' | 'group+knockout', teams: Team[], fixtures: Match[]) => {
     if (!tenantId) return;
     const id = `tourney-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
@@ -87,18 +87,20 @@ export const useTournament = () => {
     }
   };
 
-  const updateMatchScore = async (matchId: string, homeScore: number, awayScore: number) => {
+  const updateMatchScore = async (matchId: string, homeScore: number | null, awayScore: number | null) => {
     if (!activeId) return;
 
     const t = tournaments.find(tourney => tourney.id === activeId);
     if (!t) return;
 
+    const isCompleted = homeScore !== null && awayScore !== null;
+
     let newMatches = t.matches.map(m => 
-      m.id === matchId ? { ...m, homeScore, awayScore, status: 'completed' as const } : m
+      m.id === matchId ? { ...m, homeScore, awayScore, status: (isCompleted ? 'completed' : m.date !== null ? 'scheduled' : 'pending') as 'completed' | 'scheduled' | 'live' } : m
     );
     
-    // If it's a Cup, progress the winner
-    if (t.type === 'cup') {
+    // If it's a Cup/Knockout, progress the winner
+    if (t.type === 'knockout' || matchId.startsWith('cup-')) {
       const completedMatch = newMatches.find(m => m.id === matchId);
       if (completedMatch) {
         const winnerId = (completedMatch.homeScore || 0) > (completedMatch.awayScore || 0) 
@@ -123,7 +125,7 @@ export const useTournament = () => {
       }
     }
 
-    const newTeams = t.type === 'league' ? calculateStandings(t.teams, newMatches) : t.teams;
+    const newTeams = (t.type === 'league' || t.type === 'group+knockout') ? calculateStandings(t.teams, newMatches) : t.teams;
     
     try {
       await updateDoc(doc(db, 'tournaments', activeId), {
@@ -132,6 +134,27 @@ export const useTournament = () => {
       });
     } catch (error) {
       console.error("Error updating match score:", error);
+    }
+  };
+
+  const updateMatchDate = async (matchId: string, timestamp: number) => {
+    if (!activeId) return;
+    const t = tournaments.find(tourney => tourney.id === activeId);
+    if (!t) return;
+    const newMatches = t.matches.map(m => m.id === matchId ? { ...m, date: timestamp } : m);
+    try {
+      await updateDoc(doc(db, 'tournaments', activeId), { matches: newMatches });
+    } catch (error) {
+      console.error("Error updating match date:", error);
+    }
+  };
+
+  const updateTournamentMatches = async (matches: Match[]) => {
+    if (!activeId) return;
+    try {
+      await updateDoc(doc(db, 'tournaments', activeId), { matches });
+    } catch (error) {
+      console.error("Error updating matches:", error);
     }
   };
 
@@ -178,6 +201,8 @@ export const useTournament = () => {
     setActiveId,
     createTournament,
     updateMatchScore,
+    updateMatchDate,
+    updateTournamentMatches,
     addManualMatch,
     endTournament,
     deleteTournament,

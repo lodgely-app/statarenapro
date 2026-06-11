@@ -48,7 +48,23 @@ const AppRoutes = () => {
   }
 
   return (
-    <Outlet />
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-1">
+        <Outlet />
+      </div>
+      <footer className="bg-white border-t border-sofa-border py-6 px-4 md:px-8 mt-auto z-10">
+        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 opacity-50">
+            <img src="/favicon.png" alt="Logo" className="w-4 h-4 grayscale" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-sofa-text">StatArena Pro</span>
+          </div>
+          <div className="text-[9px] font-bold text-sofa-muted uppercase tracking-wider text-center md:text-right">
+             &copy; {new Date().getFullYear()} StatArena Pro. All rights reserved.<br/>
+            Powered by Tournament Intelligence
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 };
 
