@@ -304,12 +304,12 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
               </button>
             )}
           </div>
-          {!isAdmin && (
+          {/* {!isAdmin && (
              <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded border border-sofa-border">
                 <Lock className="w-2.5 h-2.5 text-sofa-muted opacity-40" />
                 <span className="text-[8px] font-black text-sofa-muted opacity-40 uppercase tracking-widest">Read Only</span>
              </div>
-          )}
+          )} */}
         </div>
       )}
 
