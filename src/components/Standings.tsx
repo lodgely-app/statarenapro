@@ -11,7 +11,7 @@ export const Standings = ({ teams }: StandingsProps) => {
       {/* Table Header */}
       <div className="bg-slate-50 border-b border-sofa-border px-4 py-3 flex items-center justify-between">
         <span className="text-[10px] font-bold text-sofa-muted uppercase tracking-wider">Standings</span>
-        <span className="text-[9px] font-bold text-sofa-blue cursor-pointer hover:underline">FULL TABLE</span>
+        {/* <span className="text-[9px] font-bold text-sofa-blue cursor-pointer hover:underline">FULL TABLE</span> */}
       </div>
 
       <div className="w-full overflow-x-auto custom-scrollbar">

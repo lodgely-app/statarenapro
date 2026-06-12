@@ -31,13 +31,13 @@ export const Navbar = ({ activeTab, setActiveTab }: NavbarProps) => {
               </div>
               <div className="flex flex-col leading-tight">
                 <div className="flex items-center gap-3">
-                  <span className="text-white font-black text-lg md:text-xl tracking-tighter uppercase">
+                  <span className={`text-white font-black text-lg md:text-xl tracking-tighter uppercase ${tenant?.name ? 'hidden md:inline' : ''}`}>
                     STATARENA <span className="font-light opacity-50">PRO</span>
                   </span>
                   {tenant?.name && (
                     <>
-                      <div className="h-5 w-px bg-white/20 mx-1 rounded" />
-                      <span className="text-[11px] font-black text-white/90 uppercase tracking-[0.2em]">{tenant.name}</span>
+                      <div className="hidden md:block h-5 w-px bg-white/20 mx-1 rounded" />
+                      <span className="text-[11px] font-black text-white/90 uppercase tracking-[0.2em] truncate max-w-[120px] md:max-w-none">{tenant.name}</span>
                     </>
                   )}
                 </div>

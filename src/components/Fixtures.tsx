@@ -231,7 +231,7 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
   const [tempScores, setTempScores] = React.useState<Record<string, { h: number | null; a: number | null }>>({});
   const [tempDateStr, setTempDateStr] = useState<string>('');
   const [tempTimeStr, setTempTimeStr] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'matches' | 'groups' | 'upcoming' | 'results'>(isDashboard ? 'upcoming' : 'matches');
+  const [viewMode, setViewMode] = useState<'matches' | 'groups' | 'upcoming' | 'results' | 'unscheduled'>(isDashboard ? 'upcoming' : 'matches');
 
   const startEditing = (match: Match) => {
     if (!isAdmin) return;
@@ -291,6 +291,10 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
                   RESULTS
                   {viewMode === 'results' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sofa-blue" />}
                 </button>
+                <button onClick={() => setViewMode('unscheduled')} className={`px-4 h-full flex items-center text-[10px] font-bold tracking-wider relative transition-all ${viewMode === 'unscheduled' ? 'text-sofa-blue' : 'text-sofa-muted hover:text-sofa-text'}`}>
+                  UNSCHEDULED
+                  {viewMode === 'unscheduled' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sofa-blue" />}
+                </button>
               </>
             )}
             {!isDashboard && tournamentType === 'group+knockout' && (
@@ -340,6 +344,7 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
                 if (hideTabs) return true;
                 if (viewMode === 'upcoming') return m.status === 'scheduled' && m.date !== null;
                 if (viewMode === 'results') return m.status === 'completed';
+                if (viewMode === 'unscheduled') return m.status === 'scheduled' && m.date === null;
                 return true;
               })
               .reduce((acc, match) => {
@@ -377,7 +382,7 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
                   )}
                 </div>
                 <div className="bg-white rounded-b-2xl border border-t-0 border-sofa-border overflow-hidden shadow-sm">
-                  <div className="flex flex-col">
+                  <div className={`flex flex-col ${viewMode === 'unscheduled' ? 'max-h-[448px] md:max-h-[512px] overflow-y-auto custom-scrollbar' : ''}`}>
                     {dateMatches.map(match => (
                       <MatchCard key={match.id} match={match} teams={teams} compact={false} onStartEditing={startEditing} isAdmin={isAdmin} isPreview={isPreview} isDashboard={isDashboard} onInlineScoreChange={onUpdateScore} onEditMatchDate={onEditMatchDate} />
                     ))}
@@ -390,6 +395,7 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
                 if (hideTabs) return true;
                 if (viewMode === 'upcoming') return m.status === 'scheduled' && m.date !== null;
                 if (viewMode === 'results') return m.status === 'completed';
+                if (viewMode === 'unscheduled') return m.status === 'scheduled' && m.date === null;
                 return true;
               }).length === 0 && (
             <div className="py-20 text-center bg-white rounded-2xl border border-sofa-border shadow-sm">
@@ -406,8 +412,9 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
             {matches
               .filter(m => {
                 if (hideTabs) return true;
-                if (viewMode === 'upcoming') return m.status === 'scheduled';
+                if (viewMode === 'upcoming') return m.status === 'scheduled' && m.date !== null;
                 if (viewMode === 'results') return m.status === 'completed';
+                if (viewMode === 'unscheduled') return m.status === 'scheduled' && m.date === null;
                 return true;
               })
               .map((match) => (
@@ -415,8 +422,9 @@ export const Fixtures = ({ matches, teams, onUpdateScore, onUpdateDate, tourname
             ))}
           </div>
           {matches.filter(m => {
-                if (viewMode === 'upcoming') return m.status === 'scheduled';
+                if (viewMode === 'upcoming') return m.status === 'scheduled' && m.date !== null;
                 if (viewMode === 'results') return m.status === 'completed';
+                if (viewMode === 'unscheduled') return m.status === 'scheduled' && m.date === null;
                 return true;
               }).length === 0 && (
             <div className="py-20 text-center bg-white">
