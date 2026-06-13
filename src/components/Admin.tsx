@@ -228,27 +228,27 @@ export const Admin = ({
 
             {createStep === 'teams' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-sofa-muted uppercase tracking-widest ml-1">Competition Title</label>
-                <input type="text" value={tournamentName} onChange={(e) => setTournamentName(e.target.value)} placeholder="e.g. Champions League" className="w-full bg-slate-50 border border-sofa-border rounded-lg px-4 py-3 text-xs font-bold text-sofa-text focus:border-sofa-blue outline-none transition-all" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-sofa-muted uppercase tracking-widest ml-1">Number of Teams</label>
-                <input type="number" min="2" max="64" value={expectedTeamCount} onChange={(e) => setExpectedTeamCount(e.target.value)} placeholder="e.g. 8" className="w-full bg-slate-50 border border-sofa-border rounded-lg px-4 py-3 text-xs font-bold text-sofa-text focus:border-sofa-blue outline-none transition-all" />
-                {expectedTeamCount && (
-                  (type === 'knockout' && ![2, 4, 8, 16, 32, 64].includes(parseInt(expectedTeamCount))) ||
-                  (type === 'group+knockout' && ![8, 16, 32, 64].includes(parseInt(expectedTeamCount))) ||
-                  (type === 'league' && parseInt(expectedTeamCount) < 2)
-                ) && (
-                  <p className="text-[8px] text-sofa-live ml-1 mt-1">
-                    {type === 'knockout' && "Must be 2, 4, 8, 16, 32, or 64"}
-                    {type === 'group+knockout' && "Must be 8, 16, 32, or 64"}
-                    {type === 'league' && "Must be at least 2 teams"}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1.5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-sofa-muted uppercase tracking-widest ml-1">Competition Title</label>
+                  <input type="text" value={tournamentName} onChange={(e) => setTournamentName(e.target.value)} placeholder="e.g. Champions League" className="w-full bg-slate-50 border border-sofa-border rounded-lg px-4 py-3 text-xs font-bold text-sofa-text focus:border-sofa-blue outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-sofa-muted uppercase tracking-widest ml-1">Number of Teams</label>
+                  <input type="number" min="2" max="64" value={expectedTeamCount} onChange={(e) => setExpectedTeamCount(e.target.value)} placeholder="e.g. 8" className="w-full bg-slate-50 border border-sofa-border rounded-lg px-4 py-3 text-xs font-bold text-sofa-text focus:border-sofa-blue outline-none transition-all" />
+                  {expectedTeamCount && (
+                    (type === 'knockout' && ![2, 4, 8, 16, 32, 64].includes(parseInt(expectedTeamCount))) ||
+                    (type === 'group+knockout' && ![8, 16, 32, 64].includes(parseInt(expectedTeamCount))) ||
+                    (type === 'league' && parseInt(expectedTeamCount) < 2)
+                  ) && (
+                    <p className="text-[8px] text-sofa-live ml-1 mt-1">
+                      {type === 'knockout' && "Must be 2, 4, 8, 16, 32, or 64"}
+                      {type === 'group+knockout' && "Must be 8, 16, 32, or 64"}
+                      {type === 'league' && "Must be at least 2 teams"}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
                 <label className="text-[9px] font-bold text-sofa-muted uppercase tracking-widest ml-1">Format Type</label>
                 <div className="flex bg-slate-50 p-1 rounded-lg border border-sofa-border">
                    <button onClick={() => setType('league')} className={`flex-1 py-2 rounded-md text-[10px] font-bold uppercase transition-all ${type === 'league' ? 'bg-white shadow-sm text-sofa-blue' : 'text-sofa-muted'}`}>LEAGUE</button>
@@ -271,10 +271,10 @@ export const Admin = ({
                      </div>
                      <p className="text-[9px] text-sofa-muted mt-1">Create a custom team below, or choose from Europe's top 5 leagues on the right.</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex md:flex-row flex-col gap-2">
                     <input type="text" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} placeholder="Club Name" className="flex-1 bg-slate-50 border border-sofa-border rounded-lg px-3 py-2 text-[10px] font-bold" />
                     <input type="text" value={newPlayerName} onChange={(e) => setNewPlayerName(e.target.value)} placeholder="Manager" className="flex-1 bg-slate-50 border border-sofa-border rounded-lg px-3 py-2 text-[10px] font-bold" />
-                    <button onClick={() => addTeam(newTeamName, newPlayerName)} className="bg-sofa-blue text-white p-2 rounded-lg"><Plus className="w-4 h-4" /></button>
+                    <button onClick={() => addTeam(newTeamName, newPlayerName)} className="px-10 py-3 bg-sofa-blue text-white rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-110 shadow-lg disabled:opacity-30 transition-all"><Plus className="w-4 h-4" /></button>
                   </div>
                   <div className="grid gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                     {teams.map((team) => (

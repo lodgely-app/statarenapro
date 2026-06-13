@@ -4,7 +4,6 @@ import { Trophy, Clock, FileText, Layout, Target, TrendingUp, Calendar, Zap, Dol
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { DashboardMockup } from '../components/DashboardMockup';
-import { HeroSection } from '../components/HeroSection';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -90,9 +89,7 @@ export default function Landing() {
               >
                 Get Started →
               </button>
-              <button className="w-full sm:w-auto bg-transparent border border-sofa-border text-sofa-navy px-8 py-4 rounded font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-colors">
-                <a href="#features" className="text-xs font-bold uppercase tracking-widest text-sofa-navy hover:text-sofa-blue transition-colors">Features</a>
-              </button>
+              <a href="#features" className="w-full sm:w-auto bg-transparent border border-sofa-border text-sofa-navy px-8 py-4 rounded font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-colors">Features</a>
             </div>
 
             {/* <div className="pt-16 flex justify-between items-end text-[8px] font-bold text-slate-400 uppercase tracking-widest">
