@@ -124,31 +124,33 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2">
                     {/* <Trophy className="w-3.5 h-3.5 text-sofa-muted" />
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-sofa-muted italic">Standings</h3> */}
-                  {(activeTournament.type === 'knockout' || activeTournament.type === 'group+knockout') && (
-                    <div className="flex items-center gap-6 mt-2 border-b border-slate-200/60 w-full sm:w-auto">
+                  <div className="flex items-center gap-6 mt-2 border-b border-slate-200/60 w-full sm:w-auto">
+                    {activeTournament.type !== 'knockout' && (
                       <button 
                         onClick={() => setStandingsTab('tables')} 
-                        className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'tables' ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'tables' || (standingsTab === 'bracket' && activeTournament.type !== 'group+knockout') ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
                       >
                         TABLES
-                        {standingsTab === 'tables' && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
+                        {(standingsTab === 'tables' || (standingsTab === 'bracket' && activeTournament.type !== 'group+knockout')) && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
                       </button>
+                    )}
+                    {(activeTournament.type === 'knockout' || activeTournament.type === 'group+knockout') && (
                       <button 
                         onClick={() => setStandingsTab('bracket')} 
-                        className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'bracket' ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'bracket' || (standingsTab === 'tables' && activeTournament.type === 'knockout') ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
                       >
                         BRACKET
-                        {standingsTab === 'bracket' && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
+                        {(standingsTab === 'bracket' || (standingsTab === 'tables' && activeTournament.type === 'knockout')) && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
                       </button>
-                      <button 
-                        onClick={() => setStandingsTab('stats')} 
-                        className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'stats' ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                        STATS
-                        {standingsTab === 'stats' && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
-                      </button>
-                    </div>
-                  )}
+                    )}
+                    <button 
+                      onClick={() => setStandingsTab('stats')} 
+                      className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'stats' ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      STATS
+                      {standingsTab === 'stats' && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
+                    </button>
+                  </div>
                   </div>
                 </div>
                 {standingsTab === 'stats' ? (
@@ -157,7 +159,7 @@ export default function Dashboard() {
                     teams={activeTournament.teams} 
                     settings={activeTournament.settings} 
                   />
-                ) : standingsTab === 'tables' || activeTournament.type === 'league' || activeTournament.type === 'infinite_league' ? (
+                ) : (standingsTab === 'tables' || activeTournament.type === 'league' || activeTournament.type === 'infinite_league') && activeTournament.type !== 'knockout' ? (
                   activeTournament.type === 'group+knockout' ? (
                     <div className="space-y-6">
                       {Array.from(new Set(activeTournament.teams.map(t => t.groupId).filter(Boolean))).sort().map(gId => (
