@@ -17,8 +17,10 @@ export default function AdminPage() {
     createTournament, 
     endTournament,
     deleteTournament,
+    updateMatchScore,
     updateMatchDate,
     updateTournamentMatches,
+    updateTournamentSettings,
     loading: tournamentsLoading
   } = useTournament();
 
@@ -56,8 +58,10 @@ export default function AdminPage() {
             tournaments={tournaments}
             activeTournament={activeTournament}
             onLogout={logout}
+            onUpdateMatchScore={updateMatchScore}
             onUpdateMatchDate={updateMatchDate}
             onUpdateTournamentMatches={updateTournamentMatches}
+            onUpdateTournamentSettings={updateTournamentSettings}
           />
         )}
       </div>

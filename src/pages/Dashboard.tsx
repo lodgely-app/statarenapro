@@ -4,6 +4,7 @@ import { Navbar } from '@/components/Navbar';
 import { Standings } from '@/components/Standings';
 import { Fixtures } from '@/components/Fixtures';
 import { Bracket } from '@/components/Bracket';
+import { TournamentStats } from '@/components/TournamentStats';
 import { useTournament } from '@/hooks/useTournament';
 import { Trophy, LayoutDashboard, Target, Users, ChevronDown } from 'lucide-react';
 import { useTenant } from '@/context/TenantContext';
@@ -12,7 +13,7 @@ import { Fixtures as FixturesPreview } from '@/components/Fixtures';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [standingsTab, setStandingsTab] = useState<'tables' | 'bracket'>('tables');
+  const [standingsTab, setStandingsTab] = useState<'tables' | 'bracket' | 'stats'>('tables');
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const { tenant } = useTenant();
   const { isAdmin } = useAuth();
@@ -23,6 +24,8 @@ export default function Dashboard() {
     setActiveId,
     updateMatchScore, 
     updateMatchDate,
+    updateTournamentSettings,
+    generateNextSeason,
     loading: tournamentsLoading
   } = useTournament();
 
@@ -137,11 +140,24 @@ export default function Dashboard() {
                         BRACKET
                         {standingsTab === 'bracket' && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
                       </button>
+                      <button 
+                        onClick={() => setStandingsTab('stats')} 
+                        className={`pb-2.5 px-1 text-xs font-bold uppercase tracking-[0.1em] relative transition-colors ${standingsTab === 'stats' ? 'text-[#3358F4]' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        STATS
+                        {standingsTab === 'stats' && <div className="absolute bottom-[-1px] left-0 right-0 h-[3px] bg-[#3358F4]" />}
+                      </button>
                     </div>
                   )}
                   </div>
                 </div>
-                {standingsTab === 'tables' || activeTournament.type === 'league' ? (
+                {standingsTab === 'stats' ? (
+                  <TournamentStats 
+                    matches={activeTournament.matches} 
+                    teams={activeTournament.teams} 
+                    settings={activeTournament.settings} 
+                  />
+                ) : standingsTab === 'tables' || activeTournament.type === 'league' || activeTournament.type === 'infinite_league' ? (
                   activeTournament.type === 'group+knockout' ? (
                     <div className="space-y-6">
                       {Array.from(new Set(activeTournament.teams.map(t => t.groupId).filter(Boolean))).sort().map(gId => (
@@ -159,19 +175,20 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div className="order-1 lg:order-2 lg:col-span-5 space-y-4">
-                <div className="flex items-center gap-2 px-2">
-                  <LayoutDashboard className="w-3.5 h-3.5 text-sofa-muted" />
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-sofa-muted italic">Fixtures</h3>
+              <div className="order-1 lg:order-2 lg:col-span-5 h-full relative">
+                <div className="sticky top-24">
+                  <Fixtures 
+                    matches={activeTournament.matches} 
+                    teams={activeTournament.teams} 
+                    onUpdateScore={updateMatchScore}
+                    onUpdateDate={updateMatchDate}
+                    tournamentType={activeTournament.type}
+                    tournamentSettings={activeTournament.settings}
+                    isAdmin={isAdmin}
+                    isDashboard={true}
+                    onGenerateNextSeason={generateNextSeason}
+                  />
                 </div>
-                <Fixtures 
-                  matches={activeTournament.matches} 
-                  teams={activeTournament.teams} 
-                  onUpdateScore={updateMatchScore}
-                  tournamentType={activeTournament.type}
-                  isAdmin={isAdmin}
-                  isDashboard={true}
-                />
               </div>
             </div>
           </>

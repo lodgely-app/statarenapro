@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Shield, Settings2, Play, Shuffle, CalendarPlus, Search, Globe, ChevronDown, CheckCircle2, History, User, Trophy, Layout, Trash, FilePlus, ChevronRight, X, Users, Target } from 'lucide-react';
-import type { Team, Match, Tournament } from '@/types/tournament';
+import type { Team, Match, Tournament, MatchEvent } from '@/types/tournament';
 import { generateLeagueFixtures, generateCupBracket, generateGroupKnockout } from '@/lib/tournament-logic';
 import { PRESET_TEAMS } from '@/lib/teams-data';
 import { ScheduleManager } from './ScheduleManager';
@@ -8,15 +8,17 @@ import { Fixtures as FixturesPreview } from '@/components/Fixtures';
 import { useTournament } from '@/hooks/useTournament';
 
 interface AdminProps {
-  onStartTournament: (name: string, type: 'league' | 'knockout' | 'group+knockout', teams: Team[], fixtures: Match[]) => void;
+  onStartTournament: (name: string, type: 'league' | 'knockout' | 'group+knockout' | 'infinite_league', teams: Team[], fixtures: Match[], settings?: any) => void;
   onEndTournament: (id: string) => void;
   onDeleteTournament: (id: string) => void;
   onSelectTournament: (id: string) => void;
   tournaments: Tournament[];
   activeTournament: Tournament | null;
   onLogout: () => void;
+  onUpdateMatchScore?: (matchId: string, homeScore: number | null, awayScore: number | null, events?: MatchEvent[], timestamp?: number | null) => void;
   onUpdateMatchDate?: (matchId: string, timestamp: number) => void;
   onUpdateTournamentMatches?: (matches: Match[]) => void;
+  onUpdateTournamentSettings?: (id: string, settings: any) => void;
 }
 
 export const Admin = ({ 
@@ -27,15 +29,17 @@ export const Admin = ({
   tournaments,
   activeTournament,
   onLogout,
+  onUpdateMatchScore,
   onUpdateMatchDate,
-  onUpdateTournamentMatches
+  onUpdateTournamentMatches,
+  onUpdateTournamentSettings
 }: AdminProps) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [fixtures, setFixtures] = useState<Match[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
   const [tournamentName, setTournamentName] = useState('');
-  const [type, setType] = useState<'league' | 'knockout' | 'group+knockout'>('league');
+  const [type, setType] = useState<'league' | 'knockout' | 'group+knockout' | 'infinite_league'>('league');
   const [expectedTeamCount, setExpectedTeamCount] = useState<string>('');
   const [showCreateForm, setShowCreateForm] = useState(tournaments.length === 0);
   const [createStep, setCreateStep] = useState<'teams' | 'fixtures' | 'schedule'>('teams');
@@ -43,6 +47,12 @@ export const Admin = ({
   
   const [selectedLeague, setSelectedLeague] = useState<string>('Premier League');
   const [teamSearch, setTeamSearch] = useState('');
+  
+  const [statsSettings, setStatsSettings] = useState({
+    trackGoals: true,
+    trackYellowCards: true,
+    trackRedCards: true
+  });
 
   const [homeTeamId, setHomeTeamId] = useState('');
   const [awayTeamId, setAwayTeamId] = useState('');
@@ -92,7 +102,7 @@ export const Admin = ({
     if (teams.length !== expected || teams.length < 2) return;
     
     let generatedMatches: Match[] = [];
-    if (type === 'league') {
+    if (type === 'league' || type === 'infinite_league') {
       generatedMatches = generateLeagueFixtures(teams, 'temp-id');
     } else if (type === 'group+knockout') {
       const { matches, teams: updatedTeams } = generateGroupKnockout(teams, 'temp-id');
@@ -111,7 +121,7 @@ export const Admin = ({
     const isValidKnockout = (type === 'knockout' || type === 'group+knockout') ? [2, 4, 8, 16, 32, 64].includes(expected) : true;
     if (!tournamentName || teams.length !== expected || teams.length < 2 || !isValidKnockout) return;
     
-    onStartTournament(tournamentName, type, teams, finalFixtures);
+    onStartTournament(tournamentName, type, teams, finalFixtures, statsSettings);
     setTeams([]);
     setFixtures([]);
     setTournamentName('');
@@ -239,27 +249,50 @@ export const Admin = ({
                   {expectedTeamCount && (
                     (type === 'knockout' && ![2, 4, 8, 16, 32, 64].includes(parseInt(expectedTeamCount))) ||
                     (type === 'group+knockout' && ![8, 16, 32, 64].includes(parseInt(expectedTeamCount))) ||
-                    (type === 'league' && parseInt(expectedTeamCount) < 2)
+                    ((type === 'league' || type === 'infinite_league') && parseInt(expectedTeamCount) < 2)
                   ) && (
                     <p className="text-[8px] text-sofa-live ml-1 mt-1">
                       {type === 'knockout' && "Must be 2, 4, 8, 16, 32, or 64"}
                       {type === 'group+knockout' && "Must be 8, 16, 32, or 64"}
-                      {type === 'league' && "Must be at least 2 teams"}
+                      {(type === 'league' || type === 'infinite_league') && "Must be at least 2 teams"}
                     </p>
                   )}
                 </div>
                 <div className="space-y-1.5">
                 <label className="text-[9px] font-bold text-sofa-muted uppercase tracking-widest ml-1">Format Type</label>
-                <div className="flex bg-slate-50 p-1 rounded-lg border border-sofa-border">
-                   <button onClick={() => setType('league')} className={`flex-1 py-2 rounded-md text-[10px] font-bold uppercase transition-all ${type === 'league' ? 'bg-white shadow-sm text-sofa-blue' : 'text-sofa-muted'}`}>LEAGUE</button>
-                   <button onClick={() => setType('knockout')} className={`flex-1 py-2 rounded-md text-[10px] font-bold uppercase transition-all ${type === 'knockout' ? 'bg-white shadow-sm text-sofa-blue' : 'text-sofa-muted'}`}>KNOCKOUT</button>
-                   <button onClick={() => setType('group+knockout')} className={`flex-1 py-2 rounded-md text-[10px] font-bold uppercase transition-all ${type === 'group+knockout' ? 'bg-white shadow-sm text-sofa-blue' : 'text-sofa-muted'}`}>GROUP+KNOCKOUT</button>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-1 bg-slate-50 p-1 rounded-lg border border-sofa-border">
+                   <button onClick={() => setType('league')} className={`py-2 rounded-md text-[10px] font-bold uppercase transition-all ${type === 'league' ? 'bg-white shadow-sm text-sofa-blue' : 'text-sofa-muted'}`}>LEAGUE</button>
+                   <button onClick={() => setType('infinite_league')} className={`py-2 rounded-md text-[10px] font-bold uppercase transition-all ${type === 'infinite_league' ? 'bg-white shadow-sm text-sofa-blue' : 'text-sofa-muted'}`}>INFINITE LEAGUE</button>
+                   <button onClick={() => setType('knockout')} className={`py-2 rounded-md text-[10px] font-bold uppercase transition-all ${type === 'knockout' ? 'bg-white shadow-sm text-sofa-blue' : 'text-sofa-muted'}`}>KNOCKOUT</button>
+                   <button onClick={() => setType('group+knockout')} className={`py-2 rounded-md text-[9px] font-bold uppercase transition-all ${type === 'group+knockout' ? 'bg-white shadow-sm text-sofa-blue' : 'text-sofa-muted'}`}>GROUP+KNOCKOUT</button>
                 </div>
-                <p className="text-[8px] text-sofa-muted ml-1">
+                <p className="text-[8px] text-sofa-muted ml-1 mt-2">
                   {type === 'league' && "Minimum 2 teams required to generate a round-robin schedule."}
+                  {type === 'infinite_league' && "Play infinite seasons. New matchweeks generated on demand."}
                   {type === 'knockout' && "Minimum 2 teams. Byes will be generated for uneven brackets."}
                   {type === 'group+knockout' && "Minimum 2 teams required for group stages followed by a bracket."}
                 </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-black text-sofa-text uppercase tracking-widest border-b border-sofa-border pb-2">Player Stats Tracking</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { id: 'trackGoals', label: 'Goals' },
+                  { id: 'trackYellowCards', label: 'Yellow Cards' },
+                  { id: 'trackRedCards', label: 'Red Cards' }
+                ].map(stat => (
+                  <label key={stat.id} className="flex items-center gap-3 p-3 border border-sofa-border rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={(statsSettings as any)[stat.id]}
+                      onChange={(e) => setStatsSettings({ ...statsSettings, [stat.id]: e.target.checked })}
+                      className="w-4 h-4 text-sofa-blue rounded border-sofa-border focus:ring-sofa-blue"
+                    />
+                    <span className="text-[10px] font-bold text-sofa-text uppercase">{stat.label}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -399,6 +432,39 @@ export const Admin = ({
                     </div>
                  </div>
               </div>
+
+              {onUpdateTournamentSettings && (
+                <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-sofa-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-[10px] font-black text-sofa-text uppercase tracking-widest flex items-center gap-2"><Settings2 className="w-4 h-4 text-sofa-blue" /> Tracking Settings</h3>
+                    <p className="text-[9px] text-sofa-muted mt-1">Enable or disable player stats tracking for this competition.</p>
+                  </div>
+                  <div className="flex gap-4">
+                    {[
+                      { id: 'trackGoals', label: 'Goals & Assists' },
+                      { id: 'trackYellowCards', label: 'Yellow' },
+                      { id: 'trackRedCards', label: 'Red' }
+                    ].map(stat => {
+                      const isEnabled = (activeTournament.settings as any)?.[stat.id] ?? false;
+                      return (
+                        <label key={stat.id} className="flex items-center gap-1.5 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={isEnabled}
+                            onChange={(e) => {
+                              const newSettings = { ...activeTournament.settings, [stat.id]: e.target.checked };
+                              onUpdateTournamentSettings(activeTournament.id, newSettings);
+                            }}
+                            className="w-3.5 h-3.5 text-sofa-blue rounded border-sofa-border focus:ring-sofa-blue"
+                          />
+                          <span className="text-[9px] font-bold text-sofa-text uppercase">{stat.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="mb-8">
                 <ScheduleManager 
                   matches={activeTournament.matches} 
@@ -432,7 +498,7 @@ export const Admin = ({
                     <FixturesPreview 
                       matches={activeTournament.matches.filter(m => m.date !== null)} 
                       teams={activeTournament.teams} 
-                      onUpdateScore={() => {}} 
+                      onUpdateScore={onUpdateMatchScore || (() => {})} 
                       tournamentType={activeTournament.type} 
                       isAdmin={true} 
                       isPreview={false} 
@@ -446,7 +512,7 @@ export const Admin = ({
                     <FixturesPreview 
                       matches={activeTournament.matches.filter(m => m.date === null)} 
                       teams={activeTournament.teams} 
-                      onUpdateScore={() => {}} 
+                      onUpdateScore={onUpdateMatchScore || (() => {})} 
                       tournamentType={activeTournament.type} 
                       isAdmin={false} 
                       isPreview={true} 

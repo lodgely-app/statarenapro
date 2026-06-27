@@ -6,15 +6,22 @@ export interface Tenant {
   ownerUid: string;
 }
 
+export interface TournamentSettings {
+  trackGoals?: boolean;
+  trackYellowCards?: boolean;
+  trackRedCards?: boolean;
+}
+
 export interface Tournament {
   id: string;
   tenantId: string;
   name: string;
-  type: 'league' | 'knockout' | 'group+knockout';
+  type: 'league' | 'knockout' | 'group+knockout' | 'infinite_league';
   status: 'upcoming' | 'active' | 'completed';
   createdAt: number;
   teams: Team[];
   matches: Match[];
+  settings?: TournamentSettings;
 }
 
 export interface TeamStats {
@@ -39,6 +46,15 @@ export interface Team {
   groupId?: string;
 }
 
+export interface MatchEvent {
+  id: string;
+  type: 'goal' | 'yellow_card' | 'red_card';
+  playerName: string;
+  teamId: string;
+  minute: string;
+  assistPlayerName?: string;
+}
+
 export interface Match {
   id: string;
   tenantId: string;
@@ -52,4 +68,5 @@ export interface Match {
   round?: number;
   groupId?: string;
   isKnockout?: boolean;
+  events?: MatchEvent[];
 }

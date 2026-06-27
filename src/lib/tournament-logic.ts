@@ -61,6 +61,24 @@ export const generateLeagueFixtures = (teams: Team[], tournamentId: string): Mat
   return matches;
 };
 
+export const appendInfiniteLeagueSeason = (teams: Team[], existingMatches: Match[], tournamentId: string): Match[] => {
+  // Find the highest round currently in existence
+  const maxRound = existingMatches.reduce((max, m) => Math.max(max, m.round || 0), 0);
+  
+  // A season generation ID to ensure match IDs are unique across seasons
+  const seasonId = Date.now().toString(36).substring(3, 8);
+
+  // Generate a fresh league season
+  const newMatches = generateLeagueFixtures(teams, tournamentId);
+
+  // Offset the rounds and make IDs unique
+  return newMatches.map(m => ({
+    ...m,
+    id: `${m.id}-s${seasonId}`,
+    round: (m.round || 1) + maxRound
+  }));
+};
+
 export const calculateStandings = (teams: Team[], matches: Match[]): Team[] => {
   const statsMap: Record<string, TeamStats> = {};
 

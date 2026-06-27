@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTenant } from '@/context/TenantContext';
 import type { Tournament, Team, Match } from '@/types/tournament';
-import { calculateStandings } from '@/lib/tournament-logic';
+import { calculateStandings, appendInfiniteLeagueSeason } from '@/lib/tournament-logic';
 import { db } from '@/lib/firebase';
 import { 
   collection, 
@@ -126,7 +126,7 @@ export const useTournament = () => {
     return () => unsubscribe();
   }, [activeId, tenantId]);
 
-  const createTournament = async (name: string, type: 'league' | 'knockout' | 'group+knockout', teams: Team[], fixtures: Match[]) => {
+  const createTournament = async (name: string, type: 'league' | 'knockout' | 'group+knockout' | 'infinite_league', teams: Team[], fixtures: Match[], settings?: any) => {
     if (!tenantId) return;
     const id = `tourney-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
@@ -152,6 +152,7 @@ export const useTournament = () => {
       matches: finalFixtures,
       status: 'active',
       createdAt: Date.now(),
+      settings: settings || {}
     };
 
     try {
@@ -162,7 +163,15 @@ export const useTournament = () => {
     }
   };
 
-  const updateMatchScore = async (matchId: string, homeScore: number | null, awayScore: number | null) => {
+  const updateTournamentSettings = async (id: string, settings: any) => {
+    try {
+      await updateDoc(doc(db, 'tournaments', id), { settings });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+    }
+  };
+
+  const updateMatchScore = async (matchId: string, homeScore: number | null, awayScore: number | null, events?: any[], timestamp?: number | null) => {
     if (!activeId) return;
 
     const t = tournaments.find(tourney => tourney.id === activeId);
@@ -170,9 +179,20 @@ export const useTournament = () => {
 
     const isCompleted = homeScore !== null && awayScore !== null;
 
-    let newMatches = t.matches.map(m => 
-      m.id === matchId ? { ...m, homeScore, awayScore, status: (isCompleted ? 'completed' : m.date !== null ? 'scheduled' : 'pending') as 'completed' | 'scheduled' | 'live' } : m
-    );
+    let newMatches = t.matches.map(m => {
+      if (m.id === matchId) {
+        const hasDate = timestamp !== undefined ? timestamp !== null : m.date !== null;
+        return { 
+          ...m, 
+          homeScore, 
+          awayScore, 
+          ...(events !== undefined && { events }), 
+          ...(timestamp !== undefined && { date: timestamp }),
+          status: (isCompleted ? 'completed' : hasDate ? 'scheduled' : 'pending') as 'completed' | 'scheduled' | 'live' 
+        };
+      }
+      return m;
+    });
     
     // If it's a Cup/Knockout, progress the winner
     if (t.type === 'knockout' || matchId.startsWith('cup-')) {
@@ -317,6 +337,21 @@ export const useTournament = () => {
     }
   };
 
+  const generateNextSeason = async () => {
+    if (!activeId) return;
+    const t = tournaments.find(tourney => tourney.id === activeId);
+    if (!t || t.type !== 'infinite_league') return;
+
+    try {
+      const newMatches = appendInfiniteLeagueSeason(t.teams, t.matches, t.id);
+      await updateDoc(doc(db, 'tournaments', activeId), {
+        matches: [...t.matches, ...newMatches]
+      });
+    } catch (error) {
+      console.error("Error generating next season:", error);
+    }
+  };
+
   const endTournament = async (id: string) => {
     try {
       await updateDoc(doc(db, 'tournaments', id), {
@@ -348,7 +383,9 @@ export const useTournament = () => {
     updateMatchScore,
     updateMatchDate,
     updateTournamentMatches,
+    updateTournamentSettings,
     addManualMatch,
+    generateNextSeason,
     endTournament,
     deleteTournament,
     loading
