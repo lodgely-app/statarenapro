@@ -119,7 +119,7 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10 items-start">
-              <div className="order-2 lg:order-1 lg:col-span-7 space-y-4">
+              <div className="lg:col-span-7 space-y-4">
                 <div className="flex items-center justify-between px-2">
                   <div className="flex items-center gap-2">
                     {/* <Trophy className="w-3.5 h-3.5 text-sofa-muted" />
@@ -177,7 +177,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div className="order-1 lg:order-2 lg:col-span-5 h-full relative">
+              <div className="lg:col-span-5 h-full relative">
                 <div className="sticky top-24">
                   <Fixtures 
                     matches={activeTournament.matches} 

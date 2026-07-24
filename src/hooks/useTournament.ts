@@ -228,7 +228,7 @@ export const useTournament = () => {
       }
     }
 
-    const newTeams = (t.type === 'league' || t.type === 'group+knockout') ? calculateStandings(t.teams, newMatches) : t.teams;
+    const newTeams = (t.type === 'league' || t.type === 'infinite_league' || t.type === 'group+knockout') ? calculateStandings(t.teams, newMatches) : t.teams;
     
     // Auto-populate knockout stage for group+knockout if all group matches are done
     if (t.type === 'group+knockout') {
