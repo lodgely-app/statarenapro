@@ -467,24 +467,33 @@ export const Fixtures = ({
                 return true;
               })
               .reduce((acc, match) => {
-                const dateKey = match.date 
-                  ? new Date(match.date).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }) 
+                const dateKey = match.date
+                  ? new Date(match.date).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
                   : 'TBD';
                 if (!acc[dateKey]) acc[dateKey] = [];
                 acc[dateKey].push(match);
                 return acc;
               }, {} as Record<string, Match[]>)
-          ).map(([dateLabel, dateMatches]) => {
-            // "Tomorrow" or "Today" calculation
-            let displayLabel = dateLabel;
-            if (dateLabel !== 'TBD') {
-               const matchDate = new Date(dateMatches[0].date!);
-               const today = new Date();
-               const tomorrow = new Date(today);
-               tomorrow.setDate(tomorrow.getDate() + 1);
-               if (matchDate.toDateString() === today.toDateString()) displayLabel = 'Today';
-               else if (matchDate.toDateString() === tomorrow.toDateString()) displayLabel = 'Tomorrow';
-            }
+          )
+            .sort((a, b) => {
+              if (a[0] === 'TBD') return 1;
+              if (b[0] === 'TBD') return -1;
+              const dateA = a[1][0]?.date || 0;
+              const dateB = b[1][0]?.date || 0;
+              return dateA - dateB;
+            })
+            .map(([dateLabel, dateMatches]) => {
+              dateMatches.sort((a, b) => (a.date || 0) - (b.date || 0));
+
+              let displayLabel = dateLabel;
+              if (dateLabel !== 'TBD') {
+                 const matchDate = new Date(dateMatches[0].date!);
+                 const today = new Date();
+                 const tomorrow = new Date(today);
+                 tomorrow.setDate(tomorrow.getDate() + 1);
+                 if (matchDate.toDateString() === today.toDateString()) displayLabel = 'Today';
+                 else if (matchDate.toDateString() === tomorrow.toDateString()) displayLabel = 'Tomorrow';
+              }
             
             return (
               <div key={dateLabel}>
@@ -535,6 +544,12 @@ export const Fixtures = ({
                 if (viewMode === 'results') return m.status === 'completed';
                 if (viewMode === 'unscheduled') return m.status === 'scheduled' && m.date === null;
                 return true;
+              })
+              .sort((a, b) => {
+                if (a.date === null && b.date === null) return 0;
+                if (a.date === null) return 1;
+                if (b.date === null) return -1;
+                return a.date - b.date;
               })
               .map((match) => (
               <MatchCard key={match.id} match={match} teams={teams} compact={false} onStartEditing={startEditing} onStartViewing={startViewing} isAdmin={isAdmin} isPreview={isPreview} isDashboard={isDashboard} onInlineScoreChange={onUpdateScore} />

@@ -244,18 +244,6 @@ export default function Register() {
                   />
                 </div>
 
-                {/* Placeholder reCAPTCHA */}
-                <div className="flex items-center justify-between p-3 bg-[#F9F9F9] border border-[#D3D3D3] rounded shadow-sm max-w-[300px] mt-4">
-                  <div className="flex items-center gap-3">
-                    <input type="checkbox" required className="w-6 h-6 border-[#C1C1C1] rounded-sm cursor-pointer" id="recaptcha-dummy" />
-                    <label htmlFor="recaptcha-dummy" className="text-sm text-[#222] cursor-pointer font-sans">I'm not a robot</label>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" alt="reCAPTCHA" className="w-8" />
-                    <span className="text-[8px] text-[#555] mt-1">reCAPTCHA</span>
-                  </div>
-                </div>
-
                 <div className="pt-2 pb-4">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
