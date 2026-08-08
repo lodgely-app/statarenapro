@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTenant } from '@/context/TenantContext';
 import type { Tournament, Team, Match } from '@/types/tournament';
-import { calculateStandings, appendInfiniteLeagueSeason } from '@/lib/tournament-logic';
+import { calculateStandings, appendInfiniteLeagueSeason, getNextSlot, rebuildKnockoutBracket } from '@/lib/tournament-logic';
 import { db } from '@/lib/firebase';
 import { 
   collection, 
@@ -68,6 +68,16 @@ export const useTournament = () => {
       
       // Auto-populate any completed group stages that are missing knockout data
       loaded.forEach(t => {
+        if (t.type === 'knockout') {
+          const { matches: rebuilt, changed, flagged } = rebuildKnockoutBracket(t.matches);
+          if (flagged.length > 0) {
+            console.warn(`Tournament ${t.id}: matches [${flagged.join(', ')}] may be scored against the wrong team due to a legacy bracket-ID bug; review manually.`);
+          }
+          if (changed) {
+            updateDoc(doc(db, 'tournaments', t.id), { matches: rebuilt }).catch(console.error);
+          }
+        }
+
         if (t.type === 'group+knockout') {
           const groupTeams = t.teams.filter(team => team.groupId);
           const allCompleted = groupTeams.length > 0 && groupTeams.every(team => {
@@ -202,24 +212,14 @@ export const useTournament = () => {
           ? completedMatch.homeTeamId 
           : completedMatch.awayTeamId;
         
-        // Parse id to find next round robustly (handles both old and new tournament formats)
-        const matchRegex = /^cup-r(\d+)-(\d+)$/;
-        const matchStr = completedMatch.id.match(matchRegex);
-        
-        if (matchStr) {
-          const currentR = parseInt(matchStr[1]);
-          const currentI = parseInt(matchStr[2]);
-          
-          const nextRoundId = currentR + 1;
-          const nextMatchIndex = Math.floor(currentI / 2);
-          const isHomeInNext = currentI % 2 === 0;
-  
-          const nextMatchId = `cup-r${nextRoundId}-${nextMatchIndex}`;
-          
+        // Use shared bracket-advancement logic (handles both old and new tournament formats)
+        const slot = getNextSlot(completedMatch.id);
+
+        if (slot) {
           newMatches = newMatches.map(m => {
-            if (m.id === nextMatchId) {
-              return isHomeInNext 
-                ? { ...m, homeTeamId: winnerId } 
+            if (m.id === slot.nextMatchId) {
+              return slot.isHome
+                ? { ...m, homeTeamId: winnerId }
                 : { ...m, awayTeamId: winnerId };
             }
             return m;

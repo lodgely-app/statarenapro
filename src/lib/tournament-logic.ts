@@ -137,12 +137,13 @@ export const generateCupBracket = (teams: Team[], tournamentId: string): Match[]
 
   // Round 1
   let teamIdx = 0;
+  let matchIdx = 0; // sequential id counter, independent of the team-pair-walking `i`
   for (let i = 0; i < totalSlots; i += 2) {
     const homeTeam = shuffled[teamIdx++];
     let awayTeam = (i + 1 < totalSlots - byes) ? shuffled[teamIdx++] : null;
 
     matches.push({
-      id: `cup-r1-${i}`,
+      id: `cup-r1-${matchIdx}`,
       homeTeamId: homeTeam.id,
       awayTeamId: awayTeam ? awayTeam.id : 'BYE',
       homeScore: awayTeam ? null : 1, // Auto-win for BYE
@@ -153,6 +154,7 @@ export const generateCupBracket = (teams: Team[], tournamentId: string): Match[]
       tenantId: '',
       date: null
     });
+    matchIdx++;
   }
 
   // Generate TBD matches for future rounds
@@ -176,6 +178,84 @@ export const generateCupBracket = (teams: Team[], tournamentId: string): Match[]
   }
 
   return matches;
+};
+
+/**
+ * Given a knockout match id of the form `cup-r{round}-{index}`, returns the id
+ * of the match one round later that its winner feeds into, and whether the
+ * winner lands in the home or away slot there. Single source of truth for
+ * bracket advancement, used both incrementally (updateMatchScore) and in bulk
+ * (rebuildKnockoutBracket).
+ */
+export const getNextSlot = (matchId: string): { nextMatchId: string; isHome: boolean } | null => {
+  const m = matchId.match(/^cup-r(\d+)-(\d+)$/);
+  if (!m) return null;
+  const round = parseInt(m[1]);
+  const idx = parseInt(m[2]);
+  return {
+    nextMatchId: `cup-r${round + 1}-${Math.floor(idx / 2)}`,
+    isHome: idx % 2 === 0
+  };
+};
+
+/**
+ * Recomputes a pure knockout bracket's match ids and downstream slots from
+ * scratch. Renumbers round 1 ids to a contiguous 0..n-1 sequence using the
+ * existing array order (the source of truth for pairing intent), then
+ * replays completed winners forward via getNextSlot. Idempotent and safe to
+ * run on already-correct data (changed will be false).
+ */
+export const rebuildKnockoutBracket = (
+  matches: Match[]
+): { matches: Match[]; changed: boolean; flagged: string[] } => {
+  const rounds = Array.from(new Set(matches.map(m => m.round ?? 0))).sort((a, b) => a - b);
+  if (rounds.length === 0) return { matches, changed: false, flagged: [] };
+
+  const firstRound = rounds[0];
+  const round1Original = matches.filter(m => m.round === firstRound && /^cup-r\d+-\d+$/.test(m.id));
+  if (round1Original.length === 0) return { matches, changed: false, flagged: [] };
+
+  // Renumber round 1 ids sequentially using existing array order — never
+  // reshuffles teams or touches any other field on round 1 matches.
+  const idRemap = new Map<string, string>();
+  round1Original.forEach((m, idx) => {
+    const newId = `cup-r${firstRound}-${idx}`;
+    if (newId !== m.id) idRemap.set(m.id, newId);
+  });
+
+  let working = matches.map(m => (idRemap.has(m.id) ? { ...m, id: idRemap.get(m.id)! } : { ...m }));
+
+  const flagged: string[] = [];
+  for (let ri = 0; ri < rounds.length - 1; ri++) {
+    const thisRound = working.filter(m => m.round === rounds[ri]);
+    thisRound.forEach(m => {
+      if (m.status !== 'completed' || m.homeScore == null || m.awayScore == null) return;
+      const winnerId = (m.homeScore || 0) > (m.awayScore || 0) ? m.homeTeamId : m.awayTeamId;
+
+      const slot = getNextSlot(m.id);
+      if (!slot) return;
+      const nextIdx = working.findIndex(nm => nm.id === slot.nextMatchId);
+      if (nextIdx === -1) return;
+
+      const next = working[nextIdx];
+      const currentVal = slot.isHome ? next.homeTeamId : next.awayTeamId;
+      if (currentVal === winnerId) return;
+
+      if (currentVal !== 'TBD' && next.status === 'completed') {
+        // Downstream match already has a recorded score against what is now a
+        // different team post-repair — do not silently overwrite; flag for review.
+        flagged.push(next.id);
+        return;
+      }
+
+      working[nextIdx] = slot.isHome
+        ? { ...next, homeTeamId: winnerId }
+        : { ...next, awayTeamId: winnerId };
+    });
+  }
+
+  const changed = JSON.stringify(working) !== JSON.stringify(matches);
+  return { matches: working, changed, flagged };
 };
 
 export const generateGroupKnockout = (teams: Team[], tournamentId: string): { matches: Match[], teams: Team[] } => {
